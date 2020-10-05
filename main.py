@@ -102,4 +102,6 @@ Espectro de potência é o módulo da FFT ao quadrado
 
 Cada intervalo de frequência
 O ultimo ponto é 2pi/período de amostragem -> Ultimo valor do fft (eixo da escala x)
+
+ESTA É UMA ALTERAÇÃO PRA TESTAR O GIT
 '''
