@@ -7,3 +7,4 @@
 
 07/10/2020
 - Use datetime module
+- Use arrays to better performance in memory (not necessary)
