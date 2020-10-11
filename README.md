@@ -11,3 +11,6 @@
 
 09/10/2020
 - Use enumerate()
+
+11/10/2020
+- Search more details about the functions that are being used (fft)
