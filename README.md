@@ -17,3 +17,4 @@
 
 13/10/2020
 - Use pandas to import the data (it comes in shape of an np.array - see lesson 289)
+- Use different libraries for plotting data (like seaborn or bokeh)
