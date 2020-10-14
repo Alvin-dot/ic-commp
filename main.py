@@ -123,7 +123,7 @@ filtered_angle_plot.line('Frequência[rad/s]', 'Ângulo[°]', line_width=2, sour
 filtered_angle_plot.axis.axis_label_text_font_style = 'bold'
 
 # Gráfico espectro de potência
-ps_signal_df = pd.DataFrame({'Espectro de Potência': power_spec[filt],
+ps_sinal_df = pd.DataFrame({'Espectro de Potência': power_spec[filt],
                              'Frequência[rad/s]': frequency_fft[filt]})
 
 tt_04 = HoverTool(tooltips=[
@@ -137,7 +137,7 @@ ps_signal_plot = figure(title="Espectro de Potência",
                         plot_width=1200,
                         plot_height=600,
                         tools=[tt_04])
-ps_signal_plot.line('Frequência[rad/s]', 'Espectro de Potência', line_width=2, source=ps_signal_df, alpha=0.8)
+ps_signal_plot.line('Frequência[rad/s]', 'Espectro de Potência', line_width=2, source=ps_sinal_df, alpha=0.8)
 ps_signal_plot.title.text_font_size = '16pt'
 ps_signal_plot.axis.axis_label_text_font_style = 'bold'
 
