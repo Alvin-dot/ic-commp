@@ -6,20 +6,12 @@ import numpy as np
 with open('515_new.csv') as csv_file:
     origin_file = list(csv.DictReader(csv_file))
 
-frequency_values = []
-date_values = []
-
 # Separa os valores de tempo e frequência em suas próprias listas
-for i in origin_file:
-    date_values.append(i['Date'])
-    frequency_values.append(i['Value'])
-
-frequency_values_float = []
+date_values = [d['Date'] for d in origin_file]
+frequency_values = [f['Value'] for f in origin_file]
 
 # Transforma os valores de frequência de 'string' para 'float'
-for i in frequency_values:
-    if i != "":
-        frequency_values_float.append(float(i))
+frequency_values_float = [float(f) for f in frequency_values if f != ""]
 
 # Processamento dos dados
 
