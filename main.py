@@ -6,7 +6,7 @@ from bokeh.models.tickers import AdaptiveTicker
 from bokeh.layouts import column
 
 # Importa o arquivo CSV como um array
-origin_file = pd.read_csv('515_new.csv', na_filter=False)
+origin_file = pd.read_csv('515.csv', na_filter=False)
 
 # Separa os valores de tempo e frequência em suas próprias listas
 date_values = np.array([d for d in origin_file['Date']])
@@ -18,7 +18,7 @@ frequency_values = np.array([f for f in origin_file['Value'] if f != ""])
 n = len(frequency_values)
 
 # Período de amostragem
-p = 1 / 120
+p = 1 / 60
 
 # Transformada de fourier do sinal real
 signal_fft = np.fft.rfft(frequency_values, n)
@@ -39,7 +39,7 @@ power_spec = signal_fft_module ** 2
 # Gráficos e Resultados
 
 # Configura exportação dos resultados
-output_file('results.html')
+output_file('results2.html')
 
 # Gráfico sinal original
 original_signal_df = pd.DataFrame({'Frequência[Hz]': frequency_values,
