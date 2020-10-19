@@ -32,7 +32,7 @@ signal_fft_module = np.abs(signal_fft)
 signal_fft_angle = np.angle(signal_fft, deg=True)
 
 # Obtenção das frequências pertencentes ao eixo horizontal em Hertz
-frequency_fft = np.linspace(0, 2 * np.pi / p, num=len(signal_fft), endpoint=False) / (2 * np.pi)
+frequency_fft = np.linspace(0, np.pi / p, num=len(signal_fft), endpoint=False) / (2 * np.pi)
 
 # Cálculo para o espectro de potência do sinal
 power_spec = signal_fft_module ** 2
