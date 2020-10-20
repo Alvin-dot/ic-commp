@@ -1,9 +1,9 @@
 # ic-commp
 
 TODO LIST
-- Comment code and function
-- Revise all the function and add some organization
-- Try not to use pandas module for plotting
+- OK - Comment code and function
+- OK - Revise all the function and add some organization
+- OK - Try not to use pandas module for plotting
 - Add unix time converter
 - Change dictionary names for better understanding
 - Add sample frequency to fft graph
