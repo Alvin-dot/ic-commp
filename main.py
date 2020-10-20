@@ -1,38 +1,51 @@
 from get_data import get_data_from_api
 from signal_processing import get_frequency_fft
 from get_plots import plot_config, show_plots
+from datetime import datetime
 
-start_time = 1603132200000
-end_time = 1603134307000
+# Get start and end time
+start_time_str = datetime.strptime('20.10.2020 09:00:00', '%d.%m.%Y %H:%M:%S')
+start_time_unix = start_time_str.timestamp() * 1000
 
-api_data = get_data_from_api(start_time, end_time)
+end_time_str = datetime.strptime('20.10.2020 11:00:00', '%d.%m.%Y %H:%M:%S')
+end_time_unix = end_time_str.timestamp() * 1000
 
-unix_time_values = [i[0] for i in api_data]
+data_freq = 60
+
+# Get the frequency data based on the start and end time
+api_data = get_data_from_api(start_time_unix, end_time_unix, interval=data_freq, interval_type=1)
+
+# Converts unix time from GMT time to local time
+unix_time_values = [i[0] - (3 * 3600000) for i in api_data]
 frequency_values = [i[1] for i in api_data]
 
-fft_value = get_frequency_fft(frequency_values, sample_frequency=60)
+# Process the fft of the signal
+fft_value = get_frequency_fft(frequency_values, sample_frequency=data_freq)
 
-# Cálculo para o espectro de potência do sinal
-power_spec = fft_value['FFT'] ** 2
+# Calculates the power spec of the fft
+power_spec = fft_value['Módulo'] ** 2
 
-# Gráficos e Resultados
-
+# Original frequency signal plot
 frequency_plot = plot_config(plot_title='Frequência da Rede',
                              x_axis_label='Tempo[unixtime]',
                              y_axis_label='Frequência[Hz]',
                              x_axis_data=unix_time_values,
-                             y_axis_data=frequency_values)
+                             y_axis_data=frequency_values,
+                             x_axis_type='datetime')
 
+# Fast fourier transform plot
 fft_plot = plot_config(plot_title='Transformada de Fourier',
                        x_axis_label='Frequência[Hz]',
                        y_axis_label='Módulo',
                        x_axis_data=fft_value['Frequência'],
-                       y_axis_data=fft_value['FFT'])
+                       y_axis_data=fft_value['Módulo'])
 
+# Power spec plot
 power_spec_plot = plot_config(plot_title='Espectro de Potência',
                               x_axis_label='Frequência[Hz]',
                               y_axis_label='Espectro de Potência',
                               x_axis_data=fft_value['Frequência'],
                               y_axis_data=power_spec)
 
+# Show all plot on a column
 show_plots(frequency_plot, fft_plot, power_spec_plot)
