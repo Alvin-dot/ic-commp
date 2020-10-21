@@ -1,10 +1,11 @@
 from bokeh.plotting import figure, output_file, show
-from bokeh.models import HoverTool
+from bokeh.models import HoverTool, Range1d
 from bokeh.models.tickers import AdaptiveTicker
 from bokeh.layouts import column
 
 
-def plot_config(plot_title, x_axis_label, y_axis_label, x_axis_data, y_axis_data, x_axis_type='auto'):
+def plot_config(plot_title, x_axis_label, y_axis_label, x_axis_data, y_axis_data, x_axis_type='auto',
+                x_min=None, x_max=None):
     """
     Configures a plot using the Bokeh module
     Returns the plot class
@@ -14,7 +15,9 @@ def plot_config(plot_title, x_axis_label, y_axis_label, x_axis_data, y_axis_data
     y_axis_label: string, y axis label
     x_axis_data: list, x axis data
     y_axis_data: list, y axis data
-
+    x_axis_type: string, optional, selects the type of data on x axis (mainly used as 'datetime' for frequency)
+    x_min: int, optional, sets minimum x axis value
+    x_max: int, optional, sets maximum x axis value
     """
 
     signal_dict = {x_axis_label: x_axis_data, y_axis_label: y_axis_data}
@@ -41,6 +44,10 @@ def plot_config(plot_title, x_axis_label, y_axis_label, x_axis_data, y_axis_data
     signal_plot.title.text_font_size = '16pt'
     # Sets the axis text font style
     signal_plot.axis.axis_label_text_font_style = 'bold'
+
+    # Sets x axis scale based on user input
+    if x_min or x_max:
+        signal_plot.x_range = Range1d(x_min, x_max)
 
     return signal_plot
 
