@@ -24,8 +24,9 @@ def get_frequency_fft(frequency_values, sample_frequency):
 
     # Obtenção do módulo do número complexo
     signal_fft_module = np.abs(signal_fft)
+    signal_fft_angle = np.angle(signal_fft, deg=False)
 
     # Obtenção das frequências pertencentes ao eixo horizontal em Hertz
     frequency_fft = np.linspace(0, np.pi / p, num=len(signal_fft), endpoint=False) / (2 * np.pi)
 
-    return {'Frequência': frequency_fft, 'Módulo': signal_fft_module}
+    return {'Frequência': frequency_fft, 'Módulo': signal_fft_module, 'Ângulo': signal_fft_angle}

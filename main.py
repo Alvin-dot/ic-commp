@@ -4,10 +4,10 @@ from get_plots import plot_config, show_plots
 from datetime import datetime
 
 # Get start and end time
-start_time_str = datetime.strptime('19.10.2020 10:00:00', '%d.%m.%Y %H:%M:%S')
+start_time_str = datetime.strptime('02.11.2020 10:00:00', '%d.%m.%Y %H:%M:%S')
 start_time_unix = start_time_str.timestamp() * 1000
 
-end_time_str = datetime.strptime('19.10.2020 12:00:00', '%d.%m.%Y %H:%M:%S')
+end_time_str = datetime.strptime('02.11.2020 12:00:00', '%d.%m.%Y %H:%M:%S')
 end_time_unix = end_time_str.timestamp() * 1000
 
 data_freq = 120

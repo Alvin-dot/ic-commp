@@ -37,7 +37,7 @@ def plot_config(plot_title, x_axis_label, y_axis_label, x_axis_data, y_axis_data
                          x_axis_type=x_axis_type,
                          tools=[tt, 'wheel_zoom', 'pan', 'reset'])
     # Line drawing for the plot
-    signal_plot.line(x_axis_label, y_axis_label, line_width=2, source=signal_dict, alpha=0.8)
+    signal_plot.circle_x(x_axis_label, y_axis_label, line_width=2, source=signal_dict, alpha=0.8)
     # Sets the number of ticks in the y axis
     signal_plot.yaxis.ticker = AdaptiveTicker(desired_num_ticks=10)
     # Sets the title text font size
