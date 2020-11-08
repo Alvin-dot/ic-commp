@@ -1,6 +1,7 @@
 # ic-commp
 
 TODO LIST
-- [x] Implementar filtro de 10 Hz na FFT
-- [ ] Testar resultado da FFT no MatLab para comprovar resultados
-- [ ] Pesquisar mais sobre FFTs em sinais no Python e filtros
+- [X] Aplicar filtros presentes nos papers
+- [ ] Conversar com Helder sobre processamento e resultados
+- [ ] Colocar algoritmo no servidor online
+- [ ] Plotar milissegundos no gráfico de frequência
