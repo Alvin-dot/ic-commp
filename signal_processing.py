@@ -21,6 +21,6 @@ def get_frequency_fft(frequency_values, sample_frequency):
     signal_fft_angle = np.angle(signal_fft, deg=False)
 
     # Obtenção das frequências pertencentes ao eixo horizontal em Hertz
-    frequency_fft = np.linspace(0, np.pi * sample_frequency, num=len(signal_fft), endpoint=False) / (2 * np.pi)
+    frequency_fft = np.linspace(0, np.pi * sample_frequency, num=len(signal_fft), endpoint=True) / (2 * np.pi)
 
     return signal_fft_module, frequency_fft, signal_fft_angle

@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 from scipy import signal, stats
 
-# Get start and end time
-start_time_str = datetime.strptime('07.11.2020 06:00:00', '%d.%m.%Y %H:%M:%S')
+# Get start and end time in unix time milisseconds
+start_time_str = datetime.strptime('05.11.2020 15:00:00', '%d.%m.%Y %H:%M:%S')
 start_time_unix = start_time_str.timestamp() * 1000
 
-end_time_str = datetime.strptime('07.11.2020 08:00:00', '%d.%m.%Y %H:%M:%S')
+end_time_str = datetime.strptime('05.11.2020 17:00:00', '%d.%m.%Y %H:%M:%S')
 end_time_unix = end_time_str.timestamp() * 1000
 
 # Frequency value derived from 4.1.5 downsampling
@@ -19,12 +19,13 @@ data_freq = 5
 # Get the frequency data based on the start and end time
 api_data = get_data_from_api(start_time_unix, end_time_unix, interval=data_freq, interval_type=1, skip_missing=0)
 
-# Converts unix time from GMT time to local time and removes milisseconds
-unix_time_values = [(i[0] - (3 * 3600000)) / 1000 for i in api_data]
+unix_time_values = [i[0] for i in api_data]
 frequency_values = [i[1] for i in api_data]
 
+# Converts unix time from GMT time to local time and removes milisseconds
+time_values = [(i - (3 * 3600000)) / 1000 for i in unix_time_values]
 # Converts unix time to Numpy DateTime64 time
-time_values = [np.datetime64(int(i), 's') for i in unix_time_values]
+time_values = [np.datetime64(int(i), 's') for i in time_values]
 
 # Creates dataframe for variables
 df = pd.DataFrame({"freq": frequency_values, "date": time_values, "original_freq": frequency_values})
@@ -52,10 +53,11 @@ alpha = 3
 df["roll_mean"] = df.freq.rolling(window=roll_window).mean()
 
 # Pad first 20 values with same as the original data
-df.loc[:roll_window-1, "roll_mean"] = df.loc[:roll_window-1, "freq"]
+df.loc[:roll_window - 1, "roll_mean"] = df.loc[:roll_window - 1, "freq"]
 
 for i in range(len(df["roll_mean"])):
-    if not ((abs(df["roll_mean"][i]) + alpha * df.freq.std()) > abs(df.freq[i]) > (abs(df["roll_mean"][i]) - alpha * df.freq.std())):
+    if not ((abs(df["roll_mean"][i]) + alpha * df["freq"].std()) > abs(df["freq"][i]) >
+            (abs(df["roll_mean"][i]) - alpha * df["freq"].std())):
         df.loc[i, "freq"] = np.NaN
 
 '''
@@ -72,6 +74,7 @@ for i in df["z_score"]:
 # -----------------------------------
 # Interpolation process
 # -----------------------------------
+'''
 # Replaces NaN values with EWM data smoothing filter
 ewm_counter = 0
 
@@ -80,36 +83,63 @@ df["ewm"] = df["freq"].ewm(alpha=0.3).mean()
 for i in df["freq"]:
     if i != i:
         df.loc[ewm_counter, "freq"] = df.loc[ewm_counter, "ewm"]
+        print("gottem 3")
     ewm_counter += 1
+'''
+
+# Replaces NaN values with mean value
+for i in range(len(df["freq"])):
+    if df["freq"][i] != df["freq"][i]:
+        df.loc[i, "freq"] = df["freq"].mean()
 
 # -----------------------------------
 # Removal of signal average
 # -----------------------------------
-df.loc[:, "freq_no_avg"] = df.loc[:, "freq"] - np.mean(df["freq"])
+df.loc[:, "freq"] -= df["freq"].mean()
 
 # -----------------------------------
 # Filtering
 # -----------------------------------
 
-h = np.float32(signal.firwin(numtaps=500, cutoff=[0.25, 2.4], window='hann', pass_zero='bandpass', scale=False, fs=data_freq))
-df["freq_filter"] = signal.lfilter(h, 1, df["freq_no_avg"])
+h = np.float32(signal.firwin(numtaps=500, cutoff=[0.08, 2.1], window='hann', pass_zero='bandpass',
+                             scale=False, fs=data_freq))
+
+df["freq_filter"] = signal.lfilter(h, 1, df["freq"])
 
 # -----------------------------------
 # FFT calculation
 # -----------------------------------
-fft_module, fft_freq, fft_angle = get_frequency_fft(df["freq_filter"], data_freq)
-# fft_freq, fft_module = signal.welch(df["freq_filter"], fs=data_freq)
+
+db = np.diff(df["freq_filter"], n=1)
+
+fft_module, fft_freq, fft_angle = get_frequency_fft(db, data_freq)
+
+'''
+fft_freq, fft_module = signal.welch(db, fs=data_freq, nperseg=(len(df["freq_filter"]))//10,
+                                    average='mean', detrend='constant')
+'''
 
 # -----------------------------------
 # Plotting
 # -----------------------------------
+fig = go.Figure()
 
 '''
 fig = go.Figure()
-fig.add_trace(go.Scatter(x=time_values, y=df["freq_no_avg"], mode='markers', name='original'))
+fig.add_trace(go.Scatter(x=time_values, y=df["freq"], mode='markers', name='original'))
 fig.add_trace(go.Scatter(x=time_values, y=df["freq_filter"], mode='markers', name='filtered'))
 fig.show()
 '''
-fig = go.Figure()
+
 fig.add_trace(go.Scatter(x=fft_freq, y=fft_module, mode='markers'))
+
+fig.add_annotation(text='Dados obtidos utilizando média movel, filtro FIR e "pre-whiten"',
+                   xref='paper', yref='paper', x=0.02, y=1, showarrow=False
+                   )
+
+fig.update_layout(
+    title="Transformada de Fourier",
+    xaxis_title="Frequência [Hz]",
+    yaxis_title="Módulo",
+)
 fig.show()
