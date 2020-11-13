@@ -7,17 +7,17 @@ import pandas as pd
 from scipy import signal, stats
 
 # Get start and end time in unix time milisseconds
-start_time_str = datetime.strptime('05.11.2020 15:00:00', '%d.%m.%Y %H:%M:%S')
+start_time_str = datetime.strptime('12.11.2020 14:00:00', '%d.%m.%Y %H:%M:%S')
 start_time_unix = start_time_str.timestamp() * 1000
 
-end_time_str = datetime.strptime('05.11.2020 17:00:00', '%d.%m.%Y %H:%M:%S')
+end_time_str = datetime.strptime('12.11.2020 16:00:00', '%d.%m.%Y %H:%M:%S')
 end_time_unix = end_time_str.timestamp() * 1000
 
 # Frequency value derived from 4.1.5 downsampling
 data_freq = 5
 
 # Get the frequency data based on the start and end time
-api_data = get_data_from_api(start_time_unix, end_time_unix, interval=data_freq, interval_type=1, skip_missing=0)
+api_data = get_data_from_api(start_time_unix, end_time_unix, interval=data_freq, interval_type=1)
 
 unix_time_values = [i[0] for i in api_data]
 frequency_values = [i[1] for i in api_data]
@@ -60,32 +60,9 @@ for i in range(len(df["roll_mean"])):
             (abs(df["roll_mean"][i]) - alpha * df["freq"].std())):
         df.loc[i, "freq"] = np.NaN
 
-'''
-# Z SCORE METHOD
-z_score_counter = 0
-
-df["z_score"] = stats.zscore(df["freq"])
-
-for i in df["z_score"]:
-    if i >= 3 or i <= -3:
-        df.loc[z_score_counter, "freq"] = np.NaN
-    z_score_counter += 1
-'''
 # -----------------------------------
 # Interpolation process
 # -----------------------------------
-'''
-# Replaces NaN values with EWM data smoothing filter
-ewm_counter = 0
-
-df["ewm"] = df["freq"].ewm(alpha=0.3).mean()
-
-for i in df["freq"]:
-    if i != i:
-        df.loc[ewm_counter, "freq"] = df.loc[ewm_counter, "ewm"]
-        print("gottem 3")
-    ewm_counter += 1
-'''
 
 # Replaces NaN values with mean value
 for i in range(len(df["freq"])):
@@ -101,10 +78,10 @@ df.loc[:, "freq"] -= df["freq"].mean()
 # Filtering
 # -----------------------------------
 
-h = np.float32(signal.firwin(numtaps=500, cutoff=[0.08, 2.1], window='hann', pass_zero='bandpass',
+h = np.float32(signal.firwin(numtaps=2500, cutoff=(0.1, 2), window='hann', pass_zero='bandpass',
                              scale=False, fs=data_freq))
 
-df["freq_filter"] = signal.lfilter(h, 1, df["freq"])
+df["freq_filter"] = signal.filtfilt(h, 1, df["freq"])
 
 # -----------------------------------
 # FFT calculation
@@ -112,34 +89,25 @@ df["freq_filter"] = signal.lfilter(h, 1, df["freq"])
 
 db = np.diff(df["freq_filter"], n=1)
 
-fft_module, fft_freq, fft_angle = get_frequency_fft(db, data_freq)
+# fft_module, fft_freq, fft_angle = get_frequency_fft(db, data_freq)
 
-'''
-fft_freq, fft_module = signal.welch(db, fs=data_freq, nperseg=(len(df["freq_filter"]))//10,
+
+fft_freq, fft_module = signal.welch(db, fs=data_freq, nperseg=(len(df["freq_filter"]))//50,
                                     average='mean', detrend='constant')
-'''
 
 # -----------------------------------
 # Plotting
 # -----------------------------------
-fig = go.Figure()
-
 '''
 fig = go.Figure()
-fig.add_trace(go.Scatter(x=time_values, y=df["freq"], mode='markers', name='original'))
-fig.add_trace(go.Scatter(x=time_values, y=df["freq_filter"], mode='markers', name='filtered'))
+fig.add_trace(go.Scatter(x=time_values, y=df["freq"], mode='lines', name='sinal original'))
+fig.add_trace(go.Scatter(x=time_values, y=df["freq_filter"], mode='lines', name='sinal filtrado'))
+fig.update_layout(title="Gráfico da frequência da rede no tempo", xaxis_title="Tempo", yaxis_title="Frequência [Hz]")
 fig.show()
 '''
-
+fig = go.Figure()
 fig.add_trace(go.Scatter(x=fft_freq, y=fft_module, mode='markers'))
-
-fig.add_annotation(text='Dados obtidos utilizando média movel, filtro FIR e "pre-whiten"',
-                   xref='paper', yref='paper', x=0.02, y=1, showarrow=False
-                   )
-
-fig.update_layout(
-    title="Transformada de Fourier",
-    xaxis_title="Frequência [Hz]",
-    yaxis_title="Módulo",
-)
+fig.update_layout(title="Transformada de Welch", xaxis_title="Frequência [Hz]", yaxis_title="Módulo")
+fig.add_annotation(text='Dados obtidos utilizando média movel, filtro FIR e diferenciação',
+                   xref='paper', yref='paper', x=0.001, y=1.05, showarrow=False)
 fig.show()
