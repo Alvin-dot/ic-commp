@@ -12,7 +12,7 @@ data_freq = 5
 # Set the data time window in hours
 data_time_window = 1
 # Set the refresh time window in minutes
-refresh_time_window = 1
+refresh_time_window = 5
 
 reset_flag = True
 
@@ -120,13 +120,16 @@ while True:
     fig.add_trace(go.Scatter(x=time_values, y=df["freq"], mode='lines', name='sinal original'))
     fig.add_trace(go.Scatter(x=time_values, y=df["freq_filter"], mode='lines', name='sinal filtrado'))
     fig.update_layout(title="Gráfico da frequência da rede no tempo", xaxis_title="Tempo", yaxis_title="Frequência [Hz]")
+    fig.write_image("Imagens PNG/frequencia.png")
     fig.show()
     
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=fft_freq, y=fft_module, mode='markers'))
     fig.update_layout(title="Transformada de Welch", xaxis_title="Frequência [Hz]", yaxis_title="Módulo")
+    fig.write_image("Imagens PNG/welch.png")
     fig.show()
 
     reset_flag = False
 
+    # Awaits for determined refresh time
     time.sleep(refresh_time_window * 60)
