@@ -1,6 +1,8 @@
 # ic-commp
 
-TODO LIST
+## Descrição
+
+## Todo - List
 - [X] Plotar milissegundos no gráfico de frequência
 - [X] Definir janela de dados e tempo de atualização
 - [X] Configurar API para vir os valores como NaN
