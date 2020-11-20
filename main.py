@@ -49,7 +49,7 @@ while True:
     time_values = [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unix_time_values]
 
     # Creates dataframe for variables
-    df = pd.DataFrame({"freq": frequency_values, "date": time_values})
+    df = pd.DataFrame({"freq": frequency_values, "date": time_values, "original_freq": frequency_values})
 
     # -----------------------------------
     # Treatment of missing data
@@ -117,13 +117,12 @@ while True:
     # Plotting
     # -----------------------------------
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time_values, y=df["freq"], mode='lines', name='sinal original'))
-    fig.add_trace(go.Scatter(x=time_values, y=df["freq_filter"], mode='lines', name='sinal filtrado'))
+    fig.add_trace(go.Scatter(x=time_values, y=df["original_freq"], mode='lines'))
     fig.update_layout(title="Gráfico da frequência da rede no tempo", xaxis_title="Tempo", yaxis_title="Frequência [Hz]")
     fig.write_image("img_frequencia.png")
     
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=fft_freq, y=fft_module, mode='markers'))
+    fig.add_trace(go.Scatter(x=fft_freq, y=fft_module, mode='lines+markers'))
     fig.update_layout(title="Transformada de Welch", xaxis_title="Frequência [Hz]", yaxis_title="Módulo")
     fig.write_image("img_welch.png")
 
