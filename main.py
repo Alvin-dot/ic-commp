@@ -121,14 +121,14 @@ while True:
     plt.xlabel('Tempo')
     plt.ylabel('Frequência [Hz]')
     plt.title('Gráfico da frequência da rede no tempo')
-    plt.savefig('./var/Grafico1.png')
+    plt.savefig('/opt/ic-commp/Grafico1.png')
     plt.close()
 
     plt.plot(fft_freq, fft_module)
     plt.xlabel('Frequência [Hz]')
     plt.ylabel('Módulo')
     plt.title('Transformada de Welch')
-    plt.savefig('./var/Grafico2.png')
+    plt.savefig('/opt/ic-commp/Grafico2.png')
     plt.close()
 
     reset_flag = False
