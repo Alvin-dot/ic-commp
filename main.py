@@ -127,7 +127,5 @@ while True:
 
     reset_flag = False
 
-    print("awaiting...")
-
     # Awaits for determined refresh time
     time.sleep(refresh_time_window * 60)
