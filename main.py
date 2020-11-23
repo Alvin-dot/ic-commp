@@ -119,12 +119,12 @@ while True:
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=time_values, y=df["original_freq"], mode='lines'))
     fig.update_layout(title="Gráfico da frequência da rede no tempo", xaxis_title="Tempo", yaxis_title="Frequência [Hz]")
-    fig.write_image("img_frequencia.png")
+    fig.write_image("/var/www/html/welch/Grafico1")
     
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=fft_freq, y=fft_module, mode='lines+markers'))
     fig.update_layout(title="Transformada de Welch", xaxis_title="Frequência [Hz]", yaxis_title="Módulo")
-    fig.write_image("img_welch.png")
+    fig.write_image("/var/www/html/welch/Grafico2")
 
     reset_flag = False
 
