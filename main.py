@@ -117,11 +117,11 @@ while True:
     # -----------------------------------
 
     # Writes plot values in a csv file
-    with open('./var/www/html/welch/Grafico1.csv', 'w') as file:
+    with open('/var/www/html/welch/Grafico1.csv', 'w') as file:
         for i in range(len(df['original_freq'])):
             file.write('%s,%s\n' % (df['date'][i], df['original_freq'][i]))
 
-    with open('./var/www/html/welch/Grafico2.csv', 'w') as file:
+    with open('/var/www/html/welch/Grafico2.csv', 'w') as file:
         for i in range(len(fft_module)):
             file.write('%s,%s\n' % (fft_freq[i], fft_module[i]))
 
