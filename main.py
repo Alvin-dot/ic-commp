@@ -1,7 +1,7 @@
 from get_data import get_data_from_api
 from datetime import datetime
 from scipy import signal
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import time
@@ -11,7 +11,7 @@ data_freq = 5
 # Set the data time window in hours
 data_time_window = 1
 # Set the refresh time window in minutes
-refresh_time_window = 5
+refresh_time_window = 1
 
 reset_flag = True
 
@@ -117,16 +117,19 @@ while True:
     # Plotting
     # -----------------------------------
 
-    # Writes plot values in a csv file
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time_values, y=df["original_freq"], mode='lines'))
-    fig.update_layout(title="Gráfico da frequência da rede no tempo", xaxis_title="Tempo", yaxis_title="Frequência [Hz]")
-    fig.write_image("/opt/ic-commp/Grafico1.png")
+    plt.plot(time_values, df["original_freq"])
+    plt.xlabel('Tempo')
+    plt.ylabel('Frequência [Hz]')
+    plt.title('Gráfico da frequência da rede no tempo')
+    plt.savefig('./var/Grafico1.png')
+    plt.close()
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=fft_freq, y=fft_module, mode='lines+markers'))
-    fig.update_layout(title="Transformada de Welch", xaxis_title="Frequência [Hz]", yaxis_title="Módulo")
-    fig.write_image("/opt/ic-commp/Grafico2.png")
+    plt.plot(fft_freq, fft_module)
+    plt.xlabel('Frequência [Hz]')
+    plt.ylabel('Módulo')
+    plt.title('Transformada de Welch')
+    plt.savefig('./var/Grafico2.png')
+    plt.close()
 
     reset_flag = False
 
