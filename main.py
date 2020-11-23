@@ -1,6 +1,7 @@
 from get_data import get_data_from_api
 from datetime import datetime
 from scipy import signal
+import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
 import time
@@ -117,13 +118,15 @@ while True:
     # -----------------------------------
 
     # Writes plot values in a csv file
-    with open('/opt/ic-commp/Grafico1.csv', 'w+') as file:
-        for i in range(len(df['original_freq'])):
-            file.write('%s,%s\n' % (df['date'][i], df['original_freq'][i]))
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time_values, y=df["original_freq"], mode='lines'))
+    fig.update_layout(title="Gráfico da frequência da rede no tempo", xaxis_title="Tempo", yaxis_title="Frequência [Hz]")
+    fig.write_image("/opt/ic-commp/Grafico1.png")
 
-    with open('/opt/ic-commp/Grafico2.csv', 'w+') as file:
-        for i in range(len(fft_module)):
-            file.write('%s,%s\n' % (fft_freq[i], fft_module[i]))
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=fft_freq, y=fft_module, mode='lines+markers'))
+    fig.update_layout(title="Transformada de Welch", xaxis_title="Frequência [Hz]", yaxis_title="Módulo")
+    fig.write_image("/opt/ic-commp/Grafico2.png")
 
     reset_flag = False
 
