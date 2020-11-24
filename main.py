@@ -1,17 +1,17 @@
 from get_data import get_data_from_api
 from datetime import datetime
 from scipy import signal
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import time
+
 
 # Sampling rate given in Hz
 data_freq = 5
 # Set the data time window in hours
 data_time_window = 1
 # Set the refresh time window in minutes
-refresh_time_window = 1
+refresh_time_window = 5
 
 reset_flag = True
 
@@ -27,6 +27,10 @@ unix_time_values = [i[0] for i in api_data]
 frequency_values = [i[1] for i in api_data]
 
 while True:
+
+    # Update status of the program
+    with open('/var/www/html/welch/status.csv', 'w+') as file:
+        file.write('loading')
 
     if not reset_flag:
         # Gets 5 minutes window for data refreshing
@@ -117,19 +121,18 @@ while True:
     # Plotting
     # -----------------------------------
 
-    plt.plot(time_values, df["original_freq"])
-    plt.xlabel('Tempo')
-    plt.ylabel('Frequência [Hz]')
-    plt.title('Gráfico da frequência da rede no tempo')
-    plt.savefig('/opt/ic-commp/Grafico1.png')
-    plt.close()
+    # Writes plot values in a csv file
+    with open('/var/www/html/welch/Grafico1.csv', 'w+') as file:
+        for i in range(len(df['original_freq'])):
+            file.write('%s,%s\n' % (df['date'][i], df['original_freq'][i]))
 
-    plt.plot(fft_freq, fft_module)
-    plt.xlabel('Frequência [Hz]')
-    plt.ylabel('Módulo')
-    plt.title('Transformada de Welch')
-    plt.savefig('/opt/ic-commp/Grafico2.png')
-    plt.close()
+    with open('/var/www/html/welch/Grafico2.csv', 'w+') as file:
+        for i in range(len(fft_module)):
+            file.write('%s,%s\n' % (fft_freq[i], fft_module[i]))
+
+    # Update status of the program
+    with open('/var/www/html/welch/status.csv', 'w+') as file:
+        file.write('working')
 
     reset_flag = False
 
