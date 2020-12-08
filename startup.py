@@ -16,7 +16,7 @@ if pmu_select == 'eficiencia':
     pmu_select = 506
 elif pmu_select == 'cabine':
     pmu_select = 515
-elif pmu_select == 'patolina':
+elif pmu_select == 'palotina':
     pmu_select = 524
 elif pmu_select == 'agrarias':
     pmu_select = 533
