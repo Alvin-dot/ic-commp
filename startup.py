@@ -6,7 +6,7 @@ import pandas as pd
 import time, sys, json
 
 # Sampling rate given in Hz
-data_freq = 5
+data_freq = int(sys.argv[3])
 # Set the data time window in minutes
 data_time_window = int(sys.argv[2])
 # Select PMU based on user input
@@ -91,10 +91,10 @@ df.loc[:, "freq"] -= df["original_freq"].mean()
 # -----------------------------------
 
 # Application of a FIR bandpass filter
-h = np.float32(signal.firwin(numtaps=2500, cutoff=(0.1, 2), window='hann', pass_zero='bandpass',
+h = np.float32(signal.firwin(numtaps=2500, cutoff=(0.1, (data_freq / 2 - 0.01)), window='hann', pass_zero='bandpass',
                              scale=False, fs=data_freq))
 
-df["freq_filter"] = signal.filtfilt(h, 1, df["freq"])
+df["freq_filter"] = signal.lfilter(h, 1, df["freq"])
 
 # Take the signal derivative for detrending purposes
 db = np.diff(df["freq_filter"], n=1)
