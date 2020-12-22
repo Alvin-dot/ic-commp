@@ -1,3 +1,5 @@
+#! /opt/ic-commp/bin/python3 startup.py
+
 from get_data import get_data_from_api
 from datetime import datetime
 from scipy import signal
