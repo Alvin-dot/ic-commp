@@ -4,120 +4,142 @@ from get_data import get_data_from_api
 from datetime import datetime
 from scipy import signal
 import numpy as np
-import pandas as pd
-import time, sys, json
+import data_preprocessing as dpp
+import time
+import sys
+import json
 
-# Sampling rate given in Hz
-data_freq = int(sys.argv[3])
+# Sampling rate in Hz
+sampleRate = 60
 # Set the data time window in minutes
-data_time_window = int(sys.argv[2])
-# Select PMU based on user input
-pmu_select = sys.argv[1]
+# timeWindow = 60
+timeWindow = int(sys.argv[2])
 
-if pmu_select == 'eficiencia':
-    pmu_select = 506
-elif pmu_select == 'cabine':
-    pmu_select = 515
-elif pmu_select == 'palotina':
-    pmu_select = 524
-elif pmu_select == 'agrarias':
-    pmu_select = 533
+# Select PMU based on user input
+# pmuSelect = "cabine"
+pmuSelect = sys.argv[1]
+
+if pmuSelect == "eficiencia":
+    pmuSelect = 506
+elif pmuSelect == "cabine":
+    pmuSelect = 515
+elif pmuSelect == "palotina":
+    pmuSelect = 524
+elif pmuSelect == "agrarias":
+    pmuSelect = 533
+
+######################### DATE CONFIGURATION #########################
 
 # Get time window from current time in unix milisseconds format
-end_time_str = datetime.now()
-end_time_unix = int(end_time_str.timestamp() * 1000)
-start_time_unix = end_time_unix - (data_time_window * 60 * 1000)
+endTime = datetime.now()
+endTime = int((endTime.timestamp() - 60) * 1000)
+startTime = endTime - (timeWindow * 60 * 1000)
+
+######################### DATA AQUISITION #########################
 
 # Get the frequency data based on the start and end time
-api_data = get_data_from_api(start_time_unix, end_time_unix, feed_id=pmu_select, interval=data_freq,
-                             interval_type=1, skip_missing=0)
+apiData = np.array([get_data_from_api(startTime,
+                                      endTime,
+                                      feed_id=pmuSelect,
+                                      interval=sampleRate,
+                                      interval_type=1,
+                                      skip_missing=0)])
 
-unix_time_values = [i[0] for i in api_data]
-frequency_values = [i[1] for i in api_data]
+# Splits data into time and frequency values and removes missing data
+unixValues = np.array([i[0] for i in apiData[0]])
+freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
+freqValues_toPHP = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 
 # Converts unix time to Numpy DateTime64 time milisseconds and converts from GMT time to local time
-time_values = [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unix_time_values]
+timeValues = np.array(
+    [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
-# Creates dataframe for variables
-df = pd.DataFrame({"date": time_values, "original_freq": frequency_values})
+######################### FILTER DESIGN #########################
 
-# -----------------------------------
-# Treatment of missing data
-# -----------------------------------
+# FIR highpass filter coefficient design
+highpassFreq = 0.15
+hpCoef = np.float32(signal.firwin(numtaps=2001,
+                                  cutoff=highpassFreq,
+                                  window='hann',
+                                  pass_zero='highpass',
+                                  fs=sampleRate))
 
-# Replaces None values with NaN
-df["original_freq"].fillna(np.NaN, inplace=True)
+######################### DOWNSAMPLE CONFIG #########################
 
-# -----------------------------------
-# Treatment of outliers
-# -----------------------------------
+# Downsample frequency in Hz
+# downsampleFreq = 5
+downsampleFreq = int(sys.argv[3])
+downsampleFactor = int(sampleRate / downsampleFreq)
 
-# Rolling mean + standard deviation method
-roll_window = 20
-alpha = 3
+######################### WELCH CONFIG #########################
 
-# Calculate moving average
-df["roll_mean"] = df["original_freq"].rolling(window=roll_window).mean()
+# Configure size of the Welch window in seconds and overlap percentage
+windowTime = 200
+overlapPercentage = 0.50
 
-# Pad first 20 values with same as the original data
-df.loc[:roll_window - 1, "roll_mean"] = df.loc[:roll_window - 1, "original_freq"]
+numSeg = int(downsampleFreq * windowTime)
+numOverlap = int(numSeg * overlapPercentage)
 
-# Defines constants used in for loop for better time performance
-general_std = df["original_freq"].std()
-outlier_counter = 0
+######################### PARCEL CONFIG #########################
 
-for i in df["roll_mean"]:
-    if not ((i + alpha * general_std) > df["original_freq"][outlier_counter] > (i - alpha * general_std)):
-        df.loc[outlier_counter, "original_freq"] = np.NaN
-    outlier_counter += 1
+# Set size of data blocks in minutes
+numberBlocks = timeWindow / 5
 
-# -----------------------------------
-# Interpolation process
-# -----------------------------------
+# Corrects length of frequency list
+if len(freqValues) % numberBlocks != 0:
+    exactMult = np.floor(len(freqValues) / numberBlocks)
+    exactLen = int(exactMult * numberBlocks)
+    lenDiff = len(freqValues) - exactLen
+    freqValues = freqValues[:-lenDiff]
 
-# Replaces NaN values with mean value
-for i in range(len(df["original_freq"])):
-    if df["original_freq"][i] != df["original_freq"][i]:
-        df.loc[i, "original_freq"] = df["original_freq"].mean()
+# Instantiate list for output values
+processedFreq = np.array([])
 
+######################### DATA PARCELING #########################
 
-# -----------------------------------
-# Removal of signal average
-# -----------------------------------
+for dataBlock in np.array_split(freqValues, numberBlocks):
 
-df.loc[:, "freq"] = df.loc[:, "original_freq"]
-df.loc[:, "freq"] -= df["original_freq"].mean()
+    # Check for long NaN runs
+    nanRun = dpp.find_nan_run(dataBlock, run_max=10)
 
-# -----------------------------------
-# Filtering
-# -----------------------------------
+    # Linear interpolation
+    dataBlock = dpp.linear_interpolation(dataBlock)
 
-# Application of a FIR bandpass filter
-h = np.float32(signal.firwin(numtaps=2500, cutoff=(0.1, (data_freq / 2 - 0.01)), window='hann', pass_zero='bandpass',
-                             scale=False, fs=data_freq))
+    # Detrend
+    dataBlock -= np.nanmean(dataBlock)
 
-df["freq_filter"] = signal.lfilter(h, 1, df["freq"])
+    # HP filter
+    dataBlock = signal.filtfilt(hpCoef, 1, dataBlock)
 
-# Take the signal derivative for detrending purposes
-db = np.diff(df["freq_filter"], n=1)
+    # Outlier removal
+    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
 
-# -----------------------------------
-# FFT calculation
-# -----------------------------------
+    # Linear interpolation
+    dataBlock = dpp.linear_interpolation(dataBlock)
 
-# Uses Welch method for FFT calculation
-fft_freq, fft_module = signal.welch(db, fs=data_freq, nperseg=(len(df["freq"])) // 20,
-                                    average='mean', detrend='constant')
+    # Downsample
+    dataBlock = signal.decimate(dataBlock, downsampleFactor, ftype="fir")
 
-# -----------------------------------
-# Data communication with PHP
-# -----------------------------------
+    processedFreq = np.append(processedFreq, dataBlock)
+
+######################## WELCH CALCULATION #########################
+
+# Welch Periodogram
+welchFrequency, welchModule = signal.welch(processedFreq,
+                                           fs=downsampleFreq,
+                                           window="hann",
+                                           nperseg=numSeg,
+                                           noverlap=numOverlap,
+                                           scaling="spectrum",
+                                           average="mean")
+
+######################### DATA SEND #########################
 
 # Prepares dictionary for JSON file
-data_to_php = {"freq": list(df['original_freq']),
-			   "date": list(df['date'].astype(str)),
-			   "welch": fft_module.tolist(),
-			   "welch_freq": fft_freq.tolist()}
+data_to_php = {"freq": freqValues_toPHP.tolist(),
+               "date": timeValues.astype(str).tolist(),
+               "welch": welchModule.tolist(),
+               "welch_freq": welchFrequency.tolist()}
 
-# Sends dict data to php files over JSON
-print (json.dumps(data_to_php))
+# # Sends dict data to php files over JSON
+print(json.dumps(data_to_php))
