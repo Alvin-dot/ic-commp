@@ -5,9 +5,9 @@ from datetime import datetime
 from scipy import signal
 import numpy as np
 import data_preprocessing as dpp
-import time
 import sys
 import json
+import time
 
 # Sampling rate in Hz
 sampleRate = 30
@@ -83,7 +83,7 @@ numOverlap = int(numSeg * overlapPercentage)
 ######################### PARCEL CONFIG #########################
 
 # Set size of data blocks in minutes
-numberBlocks = timeWindow / 5
+numberBlocks = timeWindow / 10
 
 # Corrects length of frequency list
 if len(freqValues) % numberBlocks != 0:
