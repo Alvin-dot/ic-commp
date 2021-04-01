@@ -10,7 +10,7 @@ import sys
 import json
 
 # Sampling rate in Hz
-sampleRate = 60
+sampleRate = 30
 # Set the data time window in minutes
 # timeWindow = 60
 timeWindow = int(sys.argv[2])
@@ -130,7 +130,7 @@ welchFrequency, welchModule = signal.welch(processedFreq,
                                            window="hann",
                                            nperseg=numSeg,
                                            noverlap=numOverlap,
-                                           scaling="spectrum",
+                                           scaling="density",
                                            average="mean")
 
 ######################### DATA SEND #########################
