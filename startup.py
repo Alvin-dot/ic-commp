@@ -2,21 +2,20 @@
 
 from get_data import get_data_from_api
 from datetime import datetime
-from scipy import signal
+from scipy.signal import firwin, filtfilt, welch
 import numpy as np
 import data_preprocessing as dpp
-import sys
-import json
-import time
+from sys import argv
+from json import dumps
 
 # Sampling rate in Hz
-sampleRate = int(sys.argv[3])
+sampleRate = int(argv[3])
 
 # Set the data time window in minutes
-timeWindow = int(sys.argv[2])
+timeWindow = int(argv[2])
 
 # Select PMU based on user input
-pmuSelect = sys.argv[1]
+pmuSelect = argv[1]
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -57,11 +56,11 @@ timeValues = np.array(
 
 # FIR highpass filter coefficient design
 highpassFreq = 0.15
-hpCoef = np.float32(signal.firwin(numtaps=999,
-                                  cutoff=highpassFreq,
-                                  window='hann',
-                                  pass_zero='highpass',
-                                  fs=sampleRate))
+hpCoef = np.float32(firwin(numtaps=999,
+                           cutoff=highpassFreq,
+                           window='hann',
+                           pass_zero='highpass',
+                           fs=sampleRate))
 
 ######################### WELCH CONFIG #########################
 
@@ -101,7 +100,7 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     dataBlock -= np.nanmean(dataBlock)
 
     # HP filter
-    dataBlock = signal.filtfilt(hpCoef, 1, dataBlock)
+    dataBlock = filtfilt(hpCoef, 1, dataBlock)
 
     # Outlier removal
     dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
@@ -114,13 +113,13 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
 ######################## WELCH CALCULATION #########################
 
 # Welch Periodogram
-welchFrequency, welchModule = signal.welch(processedFreq,
-                                           fs=sampleRate,
-                                           window="hann",
-                                           nperseg=numSeg,
-                                           noverlap=numOverlap,
-                                           scaling="density",
-                                           average="mean")
+welchFrequency, welchModule = welch(processedFreq,
+                                    fs=sampleRate,
+                                    window="hann",
+                                    nperseg=numSeg,
+                                    noverlap=numOverlap,
+                                    scaling="density",
+                                    average="mean")
 
 ######################### DATA SEND #########################
 
@@ -131,4 +130,4 @@ data_to_php = {"freq": freqValues_toPHP.tolist(),
                "welch_freq": welchFrequency.tolist()}
 
 # # Sends dict data to php files over JSON
-print(json.dumps(data_to_php))
+print(dumps(data_to_php))
