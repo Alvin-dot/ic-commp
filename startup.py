@@ -10,13 +10,12 @@ import json
 import time
 
 # Sampling rate in Hz
-sampleRate = 30
+sampleRate = int(sys.argv[3])
+
 # Set the data time window in minutes
-# timeWindow = 60
 timeWindow = int(sys.argv[2])
 
 # Select PMU based on user input
-# pmuSelect = "cabine"
 pmuSelect = sys.argv[1]
 
 if pmuSelect == "eficiencia":
@@ -58,26 +57,19 @@ timeValues = np.array(
 
 # FIR highpass filter coefficient design
 highpassFreq = 0.15
-hpCoef = np.float32(signal.firwin(numtaps=2001,
+hpCoef = np.float32(signal.firwin(numtaps=999,
                                   cutoff=highpassFreq,
                                   window='hann',
                                   pass_zero='highpass',
                                   fs=sampleRate))
 
-######################### DOWNSAMPLE CONFIG #########################
-
-# Downsample frequency in Hz
-# downsampleFreq = 5
-downsampleFreq = int(sys.argv[3])
-downsampleFactor = int(sampleRate / downsampleFreq)
-
 ######################### WELCH CONFIG #########################
 
 # Configure size of the Welch window in seconds and overlap percentage
-windowTime = 200
+windowTime = 100
 overlapPercentage = 0.50
 
-numSeg = int(downsampleFreq * windowTime)
+numSeg = int(sampleRate * windowTime)
 numOverlap = int(numSeg * overlapPercentage)
 
 ######################### PARCEL CONFIG #########################
@@ -117,16 +109,13 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
 
-    # Downsample
-    dataBlock = signal.decimate(dataBlock, downsampleFactor, ftype="fir")
-
     processedFreq = np.append(processedFreq, dataBlock)
 
 ######################## WELCH CALCULATION #########################
 
 # Welch Periodogram
 welchFrequency, welchModule = signal.welch(processedFreq,
-                                           fs=downsampleFreq,
+                                           fs=sampleRate,
                                            window="hann",
                                            nperseg=numSeg,
                                            noverlap=numOverlap,
