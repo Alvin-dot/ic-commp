@@ -2,11 +2,25 @@
 
 from get_data import get_data_from_api
 from datetime import datetime
-from scipy.signal import firwin, filtfilt, welch
+from scipy import signal
 import numpy as np
 import data_preprocessing as dpp
 from sys import argv
 from json import dumps
+
+
+def butterworth(data, cutoff, order, fs, kind="lowpass"):
+    # highpass filter
+    nyq = fs * 0.5
+
+    cutoff = cutoff / nyq
+
+    sos = signal.butter(order, cutoff, btype=kind, output="sos")
+
+    filtrada = signal.sosfilt(sos, data)
+
+    return filtrada
+
 
 # Sampling rate in Hz
 sampleRate = int(argv[3])
@@ -52,16 +66,6 @@ freqValues_toPHP = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 timeValues = np.array(
     [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
-######################### FILTER DESIGN #########################
-
-# FIR highpass filter coefficient design
-highpassFreq = 0.15
-hpCoef = np.float32(firwin(numtaps=999,
-                           cutoff=highpassFreq,
-                           window='hann',
-                           pass_zero='highpass',
-                           fs=sampleRate))
-
 ######################### WELCH CONFIG #########################
 
 # Configure size of the Welch window in seconds and overlap percentage
@@ -74,7 +78,7 @@ numOverlap = int(numSeg * overlapPercentage)
 ######################### PARCEL CONFIG #########################
 
 # Set size of data blocks in minutes
-numberBlocks = timeWindow / 10
+numberBlocks = 3
 
 # Corrects length of frequency list
 if len(freqValues) % numberBlocks != 0:
@@ -96,30 +100,35 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
 
+    # Outlier removal
+    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.0)
+
+    # Linear interpolation
+    dataBlock = dpp.linear_interpolation(dataBlock)
+
     # Detrend
     dataBlock -= np.nanmean(dataBlock)
 
     # HP filter
-    dataBlock = filtfilt(hpCoef, 1, dataBlock)
+    dataBlock = butterworth(dataBlock, cutoff=0.3, order=16,
+                            fs=sampleRate, kind="highpass")
 
-    # Outlier removal
-    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
-
-    # Linear interpolation
-    dataBlock = dpp.linear_interpolation(dataBlock)
+    # LP filter
+    dataBlock = butterworth(dataBlock, cutoff=7.0, order=16,
+                            fs=sampleRate, kind="lowpass")
 
     processedFreq = np.append(processedFreq, dataBlock)
 
 ######################## WELCH CALCULATION #########################
 
 # Welch Periodogram
-welchFrequency, welchModule = welch(processedFreq,
-                                    fs=sampleRate,
-                                    window="hann",
-                                    nperseg=numSeg,
-                                    noverlap=numOverlap,
-                                    scaling="density",
-                                    average="mean")
+welchFrequency, welchModule = signal.welch(processedFreq,
+                                           fs=sampleRate,
+                                           window="hann",
+                                           nperseg=numSeg,
+                                           noverlap=numOverlap,
+                                           scaling="density",
+                                           average="mean")
 
 ######################### DATA SEND #########################
 

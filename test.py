@@ -9,16 +9,30 @@ import time
 
 import matplotlib.pyplot as plt
 
+
+def butterworth(data, cutoff, order, fs, kind="lowpass"):
+    # highpass filter
+    nyq = fs * 0.5
+
+    cutoff = cutoff / nyq
+
+    sos = signal.butter(order, cutoff, btype=kind, output="sos")
+
+    filtrada = signal.sosfilt(sos, data)
+
+    return filtrada
+
+
 print("Program starting...")
 
 # Sampling rate in Hz
-sampleRate = 5
+sampleRate = 15
 
 # Set the data time window in minutes
 timeWindow = 60
 
 # Select PMU based on user input
-pmuSelect = "agrarias"
+pmuSelect = "eficiencia"
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -55,16 +69,6 @@ freqValues_toPHP = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 timeValues = np.array(
     [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
-######################### FILTER DESIGN #########################
-
-# FIR highpass filter coefficient design
-highpassFreq = 0.15
-hpCoef = np.float32(signal.firwin(numtaps=999,
-                                  cutoff=highpassFreq,
-                                  window='hann',
-                                  pass_zero='highpass',
-                                  fs=sampleRate))
-
 ######################### WELCH CONFIG #########################
 
 # Configure size of the Welch window in seconds and overlap percentage
@@ -77,7 +81,7 @@ numOverlap = int(numSeg * overlapPercentage)
 ######################### PARCEL CONFIG #########################
 
 # Set size of data blocks in minutes
-numberBlocks = timeWindow / 20
+numberBlocks = 3
 
 # Corrects length of frequency list
 if len(freqValues) % numberBlocks != 0:
@@ -99,17 +103,22 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
 
+    # Outlier removal
+    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.0)
+
+    # Linear interpolation
+    dataBlock = dpp.linear_interpolation(dataBlock)
+
     # Detrend
     dataBlock -= np.nanmean(dataBlock)
 
     # HP filter
-    dataBlock = signal.filtfilt(hpCoef, 1, dataBlock)
+    dataBlock = butterworth(dataBlock, cutoff=0.3, order=16,
+                            fs=sampleRate, kind="highpass")
 
-    # Outlier removal
-    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
-
-    # Linear interpolation
-    dataBlock = dpp.linear_interpolation(dataBlock)
+    # LP filter
+    dataBlock = butterworth(dataBlock, cutoff=7.0, order=16,
+                            fs=sampleRate, kind="lowpass")
 
     processedFreq = np.append(processedFreq, dataBlock)
 
