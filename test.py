@@ -32,7 +32,7 @@ sampleRate = 15
 timeWindow = 60
 
 # Select PMU based on user input
-pmuSelect = "eficiencia"
+pmuSelect = "agrarias"
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
