@@ -7,6 +7,7 @@ import numpy as np
 import data_preprocessing as dpp
 from sys import argv
 from json import dumps
+import math
 
 
 def butterworth(data, cutoff, order, fs, kind="lowpass"):
@@ -22,14 +23,31 @@ def butterworth(data, cutoff, order, fs, kind="lowpass"):
     return filtrada
 
 
-# Sampling rate in Hz
-sampleRate = int(argv[3])
-
-# Set the data time window in minutes
-timeWindow = int(argv[2])
-
 # Select PMU based on user input
 pmuSelect = argv[1]
+# Set the data time window in minutes
+# Default value: 60
+timeWindow = int(argv[2])
+# Sampling rate in Hz
+# Default value: 15
+sampleRate = int(argv[3])
+# Size of welch window in seconds
+# Default value: 100
+segmentWindow = int(argv[4])
+# Overlap percentage of each segment
+# Default value: 50
+segmentOverlap = int(argv[5])
+# Filter lower cutoff frequency
+# Default value: 0.3
+lower_filter = float(argv[6])
+# Filter higher cutoff frequency
+# Default value: 7.0
+higher_filter = float(argv[7])
+# Outlier detection constant
+# Default value: 3.5
+outlier_constant = float(argv[8])
+# View type
+viewSelect = argv[9]
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -50,17 +68,27 @@ startTime = endTime - (timeWindow * 60 * 1000)
 ######################### DATA AQUISITION #########################
 
 # Get the frequency data based on the start and end time
-apiData = np.array([get_data_from_api(startTime,
-                                      endTime,
-                                      feed_id=pmuSelect,
-                                      interval=sampleRate,
-                                      interval_type=1,
-                                      skip_missing=0)])
+apiData = np.array([get_data_from_api(
+    startTime,
+    endTime,
+    feed_id=pmuSelect,
+    interval=sampleRate,
+    interval_type=1,
+    skip_missing=0
+)])
 
 # Splits data into time and frequency values and removes missing data
 unixValues = np.array([i[0] for i in apiData[0]])
 freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
+
+# Pads NaN with linear interpolation
+# (this step is required for avoiding JSON parsing bug)
 freqValues_toPHP = np.array([i[1] for i in apiData[0]], dtype=np.float64)
+freqValues_toPHP = dpp.linear_interpolation(freqValues_toPHP)
+
+# Checa se valores de frequência estão disponíveis
+if (all(math.isnan(v) for v in freqValues)):
+    raise NameError('Dados da PMU indisponíveis')
 
 # Converts unix time to Numpy DateTime64 time milisseconds and converts from GMT time to local time
 timeValues = np.array(
@@ -69,11 +97,8 @@ timeValues = np.array(
 ######################### WELCH CONFIG #########################
 
 # Configure size of the Welch window in seconds and overlap percentage
-windowTime = 100
-overlapPercentage = 0.50
-
-numSeg = int(sampleRate * windowTime)
-numOverlap = int(numSeg * overlapPercentage)
+numSeg = int(sampleRate * segmentWindow)
+numOverlap = int(numSeg * (segmentOverlap/100))
 
 ######################### PARCEL CONFIG #########################
 
@@ -101,7 +126,7 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     dataBlock = dpp.linear_interpolation(dataBlock)
 
     # Outlier removal
-    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.0)
+    dataBlock = dpp.mean_outlier_removal(dataBlock, k=outlier_constant)
 
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
@@ -110,33 +135,51 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     dataBlock -= np.nanmean(dataBlock)
 
     # HP filter
-    dataBlock = butterworth(dataBlock, cutoff=0.3, order=16,
-                            fs=sampleRate, kind="highpass")
+    dataBlock = butterworth(
+        dataBlock, 
+        cutoff=lower_filter, 
+        order=16,
+        fs=sampleRate, 
+        kind="highpass"
+    )
 
     # LP filter
-    dataBlock = butterworth(dataBlock, cutoff=7.0, order=16,
-                            fs=sampleRate, kind="lowpass")
+    dataBlock = butterworth(
+        dataBlock, 
+        cutoff=higher_filter, 
+        order=16,
+        fs=sampleRate, 
+        kind="lowpass"
+    )
 
+    # Append processed data
     processedFreq = np.append(processedFreq, dataBlock)
 
 ######################## WELCH CALCULATION #########################
 
 # Welch Periodogram
-welchFrequency, welchModule = signal.welch(processedFreq,
-                                           fs=sampleRate,
-                                           window="hann",
-                                           nperseg=numSeg,
-                                           noverlap=numOverlap,
-                                           scaling="density",
-                                           average="mean")
+welchFrequency, welchModule = signal.welch(
+    processedFreq,
+    fs=sampleRate,
+    window="hann",
+    nperseg=numSeg,
+    noverlap=numOverlap,
+    scaling="density",
+    average="mean")
 
 ######################### DATA SEND #########################
 
 # Prepares dictionary for JSON file
-data_to_php = {"freq": freqValues_toPHP.tolist(),
-               "date": timeValues.astype(str).tolist(),
-               "welch": welchModule.tolist(),
-               "welch_freq": welchFrequency.tolist()}
+data_to_php = {
+    "freq": freqValues_toPHP.tolist(),
+    "date": timeValues.astype(str).tolist(),
+    "welch": welchModule.tolist(),
+    "welch_freq": welchFrequency.tolist()
+}
+
+# Adds advanced view type
+if (viewSelect == 'complete'):
+    data_to_php["freq_process"] = processedFreq.tolist()
 
 # # Sends dict data to php files over JSON
 print(dumps(data_to_php))
