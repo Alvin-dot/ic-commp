@@ -46,8 +46,6 @@ higher_filter = float(argv[7])
 # Outlier detection constant
 # Default value: 3.5
 outlier_constant = float(argv[8])
-# View type
-viewSelect = argv[9]
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -94,73 +92,33 @@ if (all(math.isnan(v) for v in freqValues)):
 timeValues = np.array(
     [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
+ts = (timeValues[2] - timeValues[1]) / np.timedelta64(1, 's')
+fs = round(1 / ts)
+
 ######################### WELCH CONFIG #########################
 
 # Configure size of the Welch window in seconds and overlap percentage
 numSeg = int(sampleRate * segmentWindow)
 numOverlap = int(numSeg * (segmentOverlap/100))
 
-######################### PARCEL CONFIG #########################
-
-# Set size of data blocks in minutes
-numberBlocks = 3
-
-# Corrects length of frequency list
-if len(freqValues) % numberBlocks != 0:
-    exactMult = np.floor(len(freqValues) / numberBlocks)
-    exactLen = int(exactMult * numberBlocks)
-    lenDiff = len(freqValues) - exactLen
-    freqValues = freqValues[:-lenDiff]
-
-# Instantiate list for output values
-processedFreq = np.array([])
-
 ######################### DATA PARCELING #########################
 
-for dataBlock in np.array_split(freqValues, numberBlocks):
-
-    # Check for long NaN runs
-    nanRun = dpp.find_nan_run(dataBlock, run_max=10)
-
-    # Linear interpolation
-    dataBlock = dpp.linear_interpolation(dataBlock)
-
-    # Outlier removal
-    dataBlock = dpp.mean_outlier_removal(dataBlock, k=outlier_constant)
-
-    # Linear interpolation
-    dataBlock = dpp.linear_interpolation(dataBlock)
-
-    # Detrend
-    dataBlock -= np.nanmean(dataBlock)
-
-    # HP filter
-    dataBlock = butterworth(
-        dataBlock, 
-        cutoff=lower_filter, 
-        order=16,
-        fs=sampleRate, 
-        kind="highpass"
-    )
-
-    # LP filter
-    dataBlock = butterworth(
-        dataBlock, 
-        cutoff=higher_filter, 
-        order=16,
-        fs=sampleRate, 
-        kind="lowpass"
-    )
-
-    # Append processed data
-    processedFreq = np.append(processedFreq, dataBlock)
+processedFreq, ts1, fs1 = dpp.preprocessamento(
+    freqValues, 
+    ts, 
+    fs, 
+    15, 
+    lower_filter, 
+    higher_filter, 
+    outlier_constant
+)
 
 ######################## WELCH CALCULATION #########################
 
 # Welch Periodogram
 welchFrequency, welchModule = signal.welch(
     processedFreq,
-    fs=sampleRate,
+    fs=fs1,
     window="hann",
     nperseg=numSeg,
     noverlap=numOverlap,
@@ -178,8 +136,7 @@ data_to_php = {
 }
 
 # Adds advanced view type
-if (viewSelect == 'complete'):
-    data_to_php["freq_process"] = processedFreq.tolist()
+data_to_php["freq_process"] = processedFreq.tolist()
 
 # # Sends dict data to php files over JSON
 print(dumps(data_to_php))
