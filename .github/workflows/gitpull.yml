@@ -14,4 +14,6 @@ jobs:
         password: ${{ secrets.PASSWORD }}
         port: ${{ secrets.PORT }}
         script_stop: true
-        script: gitpull.bash
+        script: |
+          cd /opt/ic-commp/ic-commp
+          git pull
