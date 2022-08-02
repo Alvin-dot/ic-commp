@@ -139,4 +139,5 @@ data_to_php = {
 data_to_php["freq_process"] = processedFreq.tolist()
 
 # # Sends dict data to php files over JSON
-print(dumps(data_to_php))
+data_dump = dumps(data_to_php)
+print(data_dump)
