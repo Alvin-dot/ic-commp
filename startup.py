@@ -1,6 +1,7 @@
 #! /opt/ic-commp/bin/python3 startup.py
 
 from get_data import get_data_from_api
+from postprocessing import get_main_peaks
 from datetime import datetime
 from scipy import signal
 import numpy as np
@@ -8,19 +9,6 @@ import data_preprocessing as dpp
 from sys import argv
 from json import dumps
 import math
-
-
-def butterworth(data, cutoff, order, fs, kind="lowpass"):
-    # highpass filter
-    nyq = fs * 0.5
-
-    cutoff = cutoff / nyq
-
-    sos = signal.butter(order, cutoff, btype=kind, output="sos")
-
-    filtrada = signal.sosfilt(sos, data)
-
-    return filtrada
 
 
 # Select PMU based on user input
@@ -125,6 +113,9 @@ welchFrequency, welchModule = signal.welch(
     scaling="density",
     average="mean")
 
+######################## POST PROCESSING #########################
+peaks = get_main_peaks(welchFrequency, welchModule)
+
 ######################### DATA SEND #########################
 
 # Prepares dictionary for JSON file
@@ -132,11 +123,10 @@ data_to_php = {
     "freq": freqValues_toPHP.tolist(),
     "date": timeValues.astype(str).tolist(),
     "welch": welchModule.tolist(),
-    "welch_freq": welchFrequency.tolist()
+    "welch_freq": welchFrequency.tolist(),
+    "freq_process": processedFreq.tolist(),
+    "peaks": peaks
 }
-
-# Adds advanced view type
-data_to_php["freq_process"] = processedFreq.tolist()
 
 # # Sends dict data to php files over JSON
 data_dump = dumps(data_to_php)
