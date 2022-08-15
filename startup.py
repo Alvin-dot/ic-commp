@@ -83,11 +83,6 @@ timeValues = np.array(
 ts = (timeValues[2] - timeValues[1]) / np.timedelta64(1, 's')
 fs = round(1 / ts)
 
-######################### WELCH CONFIG #########################
-
-# Configure size of the Welch window in seconds and overlap percentage
-numSeg = int(sampleRate * segmentWindow)
-numOverlap = int(numSeg * (segmentOverlap/100))
 
 ######################### DATA PARCELING #########################
 
@@ -100,6 +95,12 @@ processedFreq, ts1, fs1 = dpp.preprocessamento(
     higher_filter, 
     outlier_constant
 )
+
+######################### WELCH CONFIG #########################
+
+# Configure size of the Welch window in seconds and overlap percentage
+numSeg = int(fs1 * segmentWindow)
+numOverlap = int(numSeg * (segmentOverlap/100))
 
 ######################## WELCH CALCULATION #########################
 
